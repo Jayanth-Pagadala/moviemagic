@@ -5,7 +5,8 @@ import boto3
 
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1') # e.g., 'ap-south-1'
 
-users_table = dynamodb. Table("MovieMagic_Users") bookings_table = dynamodb. Table("MovieMagic_Bookings")
+users_table = dynamodb.Table("MovieMagic_Users")
+bookings_table = dynamodb.Table("MovieMagic_Bookings")
 
 sns = boto3.client('sns', region_name="us-east-1") sns_topic_arn = 'arn:aws:sns:us-east-1:971422691207:Movie:abbc9a87-352a-4295-9ffe-7bf675a077b5'
 

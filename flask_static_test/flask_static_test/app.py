@@ -2,17 +2,32 @@ from flask import Flask, render_template, request, redirect, session, flash, url
 import hashlib
 import uuid
 import boto3
+from flask_mail import Mail, Message
+import os
+from dotenv import load_dotenv
+
+load_dotenv()  # Load environment variables from .env
+
 
 dynamodb = boto3.resource('dynamodb', region_name='us-east-1') # e.g., 'ap-south-1'
 
-users_table = dynamodb.Table("MovieMagic_Users")
-bookings_table = dynamodb.Table("MovieMagic_Bookings")
+users_table = dynamodb. Table("MovieMagic_Users")
+bookings_table = dynamodb. Table("MovieMagic_Bookings")
 
 sns = boto3.client('sns', region_name="us-east-1") 
-sns_topic_arn = 'arn:aws:sns:us-east-1:971422691207:Movie'
-
-app = Flask(__name__)
+sns_topic_arn = 'arn:aws:sns:us-east-1:545009839820:movie:bf584b33-1369-43c0-88e8-85a6b2e77af8'
+app = Flask(_name_)
 app.secret_key = 'super-secret-key'
+app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
+app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True') == 'True'
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
+
+
+mail = Mail(app)
+
 
 # -------- Mock Data --------
 mock_users = {}  # email: hashed_password
@@ -22,10 +37,22 @@ mock_bookings = []  # list of booking dicts
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
-def send_mock_email(email, booking_info):
-    print(f"[MOCK EMAIL] Sent to {email}:\nBooking confirmed for {booking_info['movie']}\n"
-          f"Seats: {booking_info['seats']}, Date: {booking_info['date']}, Time: {booking_info['time']}\n"
-          f"Booking ID: {booking_info['id']}\n")
+def send_real_email(recipient_email, booking_info):
+    subject = "🎟 Movie Booking Confirmation"
+    body = (
+        f"Hi,\n\n"
+        f"Your booking is confirmed!\n\n"
+        f"🎬 Movie: {booking_info['movie']}\n"
+        f"🪑 Seats: {', '.join(booking_info['seats'])}\n"
+        f"📅 Date: {booking_info['date']}\n"
+        f"⏰ Time: {booking_info['time']}\n"
+        f"🆔 Booking ID: {booking_info['id']}\n\n"
+        f"Thank you for booking with MovieMagic!"
+    )
+
+    msg = Message(subject, recipients=[recipient_email])
+    msg.body = body
+    mail.send(msg)
 
 # -------- Routes --------
 @app.route('/')
@@ -154,7 +181,7 @@ def payment():
 
         mock_bookings.append(booking_info)
         session['last_booking'] = booking_info
-        send_mock_email(session['user'], booking_info)
+        send_real_email(session['user'], booking_info)
         session.pop('pending_booking', None)
         flash("Payment successful. Ticket booked!")
 
@@ -201,6 +228,5 @@ def debug_bookings():
     html += "</ul>"
     return html
 
-if __name__ == '__main__':
-   # print("🚀 Mock MovieMagic running at http://127.0.0.1:5000")
-    app.run(debug=True)
+if _name_ == '_main_':
+    app.run(host='0.0.0.0', debug=True)
